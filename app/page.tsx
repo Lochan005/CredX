@@ -4,6 +4,7 @@ import React, { useState, useMemo } from "react";
 import { calculatePrepaymentScenario, calculatePrepaymentScenario1B, calculateScenario2, calculateScenario3 } from "@lib/calculator";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
+import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, Tooltip, Legend, ResponsiveContainer } from "recharts";
 
 // Validation constants
 const VALIDATION_RULES = {
@@ -49,6 +50,19 @@ function formatMonthsYears(months: number) {
   if (years === 0) return `${remMonths} month${remMonths !== 1 ? "s" : ""}`;
   if (remMonths === 0) return `${years} year${years !== 1 ? "s" : ""}`;
   return `${years} year${years !== 1 ? "s" : ""} ${remMonths} month${remMonths !== 1 ? "s" : ""}`;
+}
+
+// Format currency in shorter format for charts (₹25L instead of ₹25,00,000)
+function formatCurrencyShort(value: number): string {
+  if (!Number.isFinite(value)) return "₹0";
+  if (value >= 10000000) {
+    return `₹${(value / 10000000).toFixed(1)}Cr`;
+  } else if (value >= 100000) {
+    return `₹${(value / 100000).toFixed(1)}L`;
+  } else if (value >= 1000) {
+    return `₹${(value / 1000).toFixed(1)}K`;
+  }
+  return `₹${value.toFixed(0)}`;
 }
 
 function MoneyInput({
@@ -281,6 +295,18 @@ export default function Home() {
   const [scenario, setScenario] = useState<"reduceTenure" | "reduceEMI" | "monthlyExtra" | "refinance">("reduceTenure");
   const [expandedCard, setExpandedCard] = useState<'stay' | 'A' | 'B' | 'C' | null>(null);
   const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
+  
+  // Chart height based on screen size
+  const [chartHeight, setChartHeight] = useState(200);
+  
+  React.useEffect(() => {
+    const updateChartHeight = () => {
+      setChartHeight(window.innerWidth >= 1024 ? 250 : 200);
+    };
+    updateChartHeight();
+    window.addEventListener('resize', updateChartHeight);
+    return () => window.removeEventListener('resize', updateChartHeight);
+  }, []);
 
   // Calculate remaining tenure for newTenure default
   const remainingTenureForDefault = tenureMonths - monthsPaid;
@@ -1466,6 +1492,288 @@ export default function Home() {
                 </button>
               </div>
             </>
+          )}
+
+          {/* Visual Analysis Section */}
+          {isValid && (
+            <div className="mt-8 bg-gray-800 rounded-2xl shadow-lg p-3 md:p-6">
+              <h2 className="text-xl font-semibold text-white mb-6 flex items-center gap-2">
+                <svg className="w-6 h-6 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                </svg>
+                Visual Analysis
+              </h2>
+
+              {isRefinance && refinanceResult ? (
+                // Refinance Scenario - Bar Chart with 4 options
+                <div className="w-full">
+                  <h3 className="text-lg font-medium text-gray-200 mb-4">Total Cost Comparison</h3>
+                  <ResponsiveContainer width="100%" minWidth={300} height={chartHeight}>
+                    <BarChart
+                      data={[
+                        {
+                          name: "Stay",
+                          totalCost: refinanceResult.stay.totalCost,
+                          isBest: refinanceResult.bestOption === 'stay',
+                        },
+                        {
+                          name: "Option A",
+                          totalCost: refinanceResult.optionA.totalCost,
+                          isBest: refinanceResult.bestOption === 'A',
+                        },
+                        {
+                          name: "Option B",
+                          totalCost: refinanceResult.optionB.totalCost,
+                          isBest: refinanceResult.bestOption === 'B',
+                        },
+                        {
+                          name: "Option C",
+                          totalCost: refinanceResult.optionC.totalCost,
+                          isBest: refinanceResult.bestOption === 'C',
+                        },
+                      ]}
+                      margin={{ top: 20, right: 10, left: 50, bottom: 30 }}
+                    >
+                      <XAxis
+                        dataKey="name"
+                        tick={{ fill: '#d1d5db', fontSize: 11 }}
+                        axisLine={{ stroke: '#4b5563' }}
+                        tickLine={{ stroke: '#4b5563' }}
+                        angle={-45}
+                        textAnchor="end"
+                        height={60}
+                      />
+                      <YAxis
+                        tick={{ fill: '#d1d5db', fontSize: 10 }}
+                        axisLine={{ stroke: '#4b5563' }}
+                        tickLine={{ stroke: '#4b5563' }}
+                        tickFormatter={(value) => formatCurrencyShort(value)}
+                        width={50}
+                      />
+                      <Tooltip
+                        contentStyle={{
+                          backgroundColor: '#1f2937',
+                          border: '1px solid #4b5563',
+                          borderRadius: '8px',
+                          color: '#f3f4f6',
+                        }}
+                        formatter={(value: number | undefined) => [
+                          formatINR(value ?? 0),
+                          'Total Cost'
+                        ]}
+                        labelFormatter={(label) => `${label}:`}
+                      />
+                      <Bar
+                        dataKey="totalCost"
+                        radius={[8, 8, 0, 0]}
+                      >
+                        {[
+                          { name: "Stay", isBest: refinanceResult.bestOption === 'stay' },
+                          { name: "Option A", isBest: refinanceResult.bestOption === 'A' },
+                          { name: "Option B", isBest: refinanceResult.bestOption === 'B' },
+                          { name: "Option C", isBest: refinanceResult.bestOption === 'C' },
+                        ].map((entry, index) => (
+                          <Cell
+                            key={`cell-${index}`}
+                            fill={entry.isBest ? '#22c55e' : '#3b82f6'}
+                          />
+                        ))}
+                      </Bar>
+                    </BarChart>
+                  </ResponsiveContainer>
+                  <div className="mt-4 flex flex-wrap justify-center gap-4 text-xs md:text-sm">
+                    <div className="flex items-center gap-2">
+                      <div className="w-3 h-3 md:w-4 md:h-4 rounded bg-blue-500"></div>
+                      <span className="text-gray-300">Standard Option</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <div className="w-3 h-3 md:w-4 md:h-4 rounded bg-green-500"></div>
+                      <span className="text-gray-300">Best Option</span>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                // Scenarios 1A, 1B, 2 - Pie Chart and Bar Chart
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-6">
+                  {/* Pie Chart - Payment Breakdown */}
+                  <div>
+                    <h3 className="text-lg font-medium text-gray-200 mb-4">Payment Breakdown</h3>
+                    <ResponsiveContainer width="100%" minWidth={250} height={chartHeight}>
+                      <PieChart>
+                        <Pie
+                          data={(() => {
+                            if (isReduceTenure && reduceTenureResult) {
+                              const principalAmount = principal;
+                              const interestWith = totalWith - principalAmount - prepay;
+                              const interestSaved = reduceTenureResult.interestSaved;
+                              return [
+                                { name: "Principal", value: principalAmount, color: "#3b82f6" },
+                                { name: "Interest (With Prepay)", value: Math.max(0, interestWith), color: "#ef4444" },
+                                { name: "Interest Saved", value: interestSaved, color: "#22c55e" },
+                              ];
+                            } else if (isReduceEMI && reduceEMIResult) {
+                              const principalAmount = principal;
+                              const interestWith = reduceEMIResult.totalCostWithPrepay - principalAmount - prepay;
+                              const interestSaved = reduceEMIResult.interestSaved;
+                              return [
+                                { name: "Principal", value: principalAmount, color: "#3b82f6" },
+                                { name: "Interest (With Prepay)", value: Math.max(0, interestWith), color: "#ef4444" },
+                                { name: "Interest Saved", value: interestSaved, color: "#22c55e" },
+                              ];
+                            } else if (isMonthlyExtra && monthlyExtraResult) {
+                              const principalAmount = principal;
+                              const interestWith = monthlyExtraResult.totalCostWithExtra - principalAmount - monthlyExtraResult.totalExtraPaid;
+                              const interestSaved = monthlyExtraResult.interestSaved;
+                              return [
+                                { name: "Principal", value: principalAmount, color: "#3b82f6" },
+                                { name: "Interest (With Extra)", value: Math.max(0, interestWith), color: "#ef4444" },
+                                { name: "Interest Saved", value: interestSaved, color: "#22c55e" },
+                              ];
+                            }
+                            return [];
+                          })()}
+                          cx="50%"
+                          cy="50%"
+                          labelLine={false}
+                          label={false}
+                          outerRadius={70}
+                          fill="#8884d8"
+                          dataKey="value"
+                        >
+                          {(() => {
+                            if (isReduceTenure && reduceTenureResult) {
+                              return [
+                                <Cell key="principal" fill="#3b82f6" />,
+                                <Cell key="interest" fill="#ef4444" />,
+                                <Cell key="saved" fill="#22c55e" />,
+                              ];
+                            } else if (isReduceEMI && reduceEMIResult) {
+                              return [
+                                <Cell key="principal" fill="#3b82f6" />,
+                                <Cell key="interest" fill="#ef4444" />,
+                                <Cell key="saved" fill="#22c55e" />,
+                              ];
+                            } else if (isMonthlyExtra && monthlyExtraResult) {
+                              return [
+                                <Cell key="principal" fill="#3b82f6" />,
+                                <Cell key="interest" fill="#ef4444" />,
+                                <Cell key="saved" fill="#22c55e" />,
+                              ];
+                            }
+                            return [];
+                          })()}
+                        </Pie>
+                        <Tooltip
+                          contentStyle={{
+                            backgroundColor: '#1f2937',
+                            border: '1px solid #4b5563',
+                            borderRadius: '8px',
+                            color: '#f3f4f6',
+                          }}
+                          formatter={(value: number | undefined, name: string | undefined) => [
+                            formatINR(value ?? 0),
+                            name ?? ''
+                          ]}
+                        />
+                      </PieChart>
+                    </ResponsiveContainer>
+                    <div className="mt-4 flex flex-wrap justify-center gap-3 text-[11px] text-gray-300">
+                      {(() => {
+                        const pieData = (() => {
+                          if (isReduceTenure && reduceTenureResult) {
+                            return [
+                              { name: "Principal", color: "#3b82f6" },
+                              { name: "Interest (With Prepay)", color: "#ef4444" },
+                              { name: "Interest Saved", color: "#22c55e" },
+                            ];
+                          } else if (isReduceEMI && reduceEMIResult) {
+                            return [
+                              { name: "Principal", color: "#3b82f6" },
+                              { name: "Interest (With Prepay)", color: "#ef4444" },
+                              { name: "Interest Saved", color: "#22c55e" },
+                            ];
+                          } else if (isMonthlyExtra && monthlyExtraResult) {
+                            return [
+                              { name: "Principal", color: "#3b82f6" },
+                              { name: "Interest (With Extra)", color: "#ef4444" },
+                              { name: "Interest Saved", color: "#22c55e" },
+                            ];
+                          }
+                          return [];
+                        })();
+                        return pieData.map((item, index) => (
+                          <div key={index} className="flex items-center gap-1.5">
+                            <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: item.color }}></div>
+                            <span>{item.name}</span>
+                          </div>
+                        ));
+                      })()}
+                    </div>
+                  </div>
+
+                  {/* Bar Chart - Cost Comparison */}
+                  <div>
+                    <h3 className="text-lg font-medium text-gray-200 mb-4">Cost Comparison</h3>
+                    <ResponsiveContainer width="100%" minWidth={300} height={chartHeight}>
+                      <BarChart
+                        data={[
+                          {
+                            name: "Without",
+                            Principal: principal,
+                            Interest: totalWithout - principal,
+                          },
+                          {
+                            name: isMonthlyExtra ? "With Extra" : "With Prepay",
+                            Principal: principal,
+                            Interest: totalWith - principal - (isMonthlyExtra ? monthlyExtraResult?.totalExtraPaid || 0 : prepay),
+                          },
+                        ]}
+                        margin={{ top: 20, right: 10, left: 50, bottom: 30 }}
+                      >
+                        <XAxis
+                          dataKey="name"
+                          tick={{ fill: '#d1d5db', fontSize: 11 }}
+                          axisLine={{ stroke: '#4b5563' }}
+                          tickLine={{ stroke: '#4b5563' }}
+                        />
+                        <YAxis
+                          tick={{ fill: '#d1d5db', fontSize: 10 }}
+                          axisLine={{ stroke: '#4b5563' }}
+                          tickLine={{ stroke: '#4b5563' }}
+                          tickFormatter={(value) => formatCurrencyShort(value)}
+                          width={50}
+                        />
+                        <Tooltip
+                          contentStyle={{
+                            backgroundColor: '#1f2937',
+                            border: '1px solid #4b5563',
+                            borderRadius: '8px',
+                            color: '#f3f4f6',
+                          }}
+                          formatter={(value: number | undefined, name: string | undefined) => [
+                            formatINR(value ?? 0),
+                            name === 'Principal' ? 'Principal' : 'Interest'
+                          ]}
+                          labelFormatter={(label) => `${label}:`}
+                        />
+                        <Bar dataKey="Principal" stackId="a" fill="#3b82f6" radius={[0, 0, 0, 0]} />
+                        <Bar dataKey="Interest" stackId="a" fill="#ef4444" radius={[8, 8, 0, 0]} />
+                      </BarChart>
+                    </ResponsiveContainer>
+                    <div className="mt-4 flex flex-wrap justify-center gap-3 text-[11px] text-gray-300">
+                      <div className="flex items-center gap-1.5">
+                        <div className="w-2.5 h-2.5 rounded bg-blue-500"></div>
+                        <span>Principal</span>
+                      </div>
+                      <div className="flex items-center gap-1.5">
+                        <div className="w-2.5 h-2.5 rounded bg-red-500"></div>
+                        <span>Interest</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
           )}
 
           {/* PDF Download and WhatsApp Share Buttons */}
