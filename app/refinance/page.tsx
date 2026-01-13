@@ -1,13 +1,19 @@
 "use client";
 
 import React, { useState, useMemo, useEffect } from "react";
-import Link from "next/link";
+import { motion } from "framer-motion";
 import { calculateScenario3 } from "../lib/calculator";
 import LoanInputs from "../components/LoanInputs";
 import ExportButtons from "../components/ExportButtons";
+import ResultsReveal from "../components/ResultsReveal";
+import SavingsHighlight from "../components/SavingsHighlight";
+import AnimatedCard from "../components/AnimatedCard";
+import AnimatedNumber from "../components/AnimatedNumber";
+import { AnimatedBarChart } from "../components/AnimatedCharts";
+import BackButton from "../components/BackButton";
+import { fadeIn } from "../lib/animation";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from "recharts";
 
 // Validation constants
 const VALIDATION_RULES = {
@@ -582,19 +588,14 @@ export default function RefinancePage() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-900 flex flex-col items-center px-2 py-4 md:py-8">
+    <motion.div
+      className="min-h-screen bg-gray-900 flex flex-col items-center px-2 py-4 md:py-8"
+      {...fadeIn}
+    >
       {/* Header Section */}
       <div className="w-full max-w-4xl mx-auto mb-6">
         <div className="flex items-center justify-between mb-4">
-          <Link
-            href="/"
-            className="text-gray-400 hover:text-green-400 transition-colors flex items-center gap-2"
-          >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-            </svg>
-            Back to Home
-          </Link>
+          <BackButton />
           <h1 className="text-2xl md:text-3xl font-bold text-white">
             Refinance Comparison
           </h1>
@@ -700,35 +701,58 @@ export default function RefinancePage() {
             <h2 className="text-xl font-semibold text-white mb-6">Comparison Results</h2>
 
             {/* Summary */}
-            <div className="mb-6 text-center">
-              <div className="text-base text-gray-400 font-medium uppercase tracking-wide mb-2">
-                Best Option
-              </div>
-              <div className="text-2xl font-bold text-green-400 mb-2">
-                {refinanceResult.bestOption === 'stay' ? 'Stay - Do Nothing' : `Option ${refinanceResult.bestOption}`}
-              </div>
-              <div className="text-base text-gray-300">
-                Maximum Savings: <span className="text-green-400 font-semibold">{formatINR(refinanceResult.maxSavings)}</span>
+            <div className="mb-6">
+              <SavingsHighlight
+                value={refinanceResult.maxSavings}
+                label="MAXIMUM SAVINGS"
+              />
+              <div className="text-center mt-4">
+                <div className="text-base text-gray-400 font-medium uppercase tracking-wide mb-2">
+                  Best Option
+                </div>
+                <div className="text-xl font-bold text-green-400">
+                  {refinanceResult.bestOption === 'stay' ? 'Stay - Do Nothing' : `Option ${refinanceResult.bestOption}`}
+                </div>
               </div>
             </div>
 
             {/* Comparison Cards Grid */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
               {/* Stay Card */}
-              <button
-                type="button"
-                onClick={() => setExpandedCard(expandedCard === 'stay' ? null : 'stay')}
-                className={`bg-gray-700 rounded-lg p-4 border-2 text-left transition-all hover:bg-gray-600 ${refinanceResult.bestOption === 'stay' ? 'border-green-500' : 'border-gray-600'}`}
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0 }}
+                className={`${refinanceResult.bestOption === 'stay' ? '' : 'opacity-75'}`}
               >
-                <div className="flex items-center justify-between mb-2">
-                  <div className="flex items-center gap-2">
-                    {refinanceResult.bestOption === 'stay' && (
-                      <div className="bg-green-500 text-white text-[8.5px] font-bold px-[4.4px] py-[2.2px] rounded-full">
-                        Best Option
-                      </div>
-                    )}
-                    <div className="font-semibold text-white">Stay - Do Nothing</div>
-                  </div>
+                <button
+                  type="button"
+                  onClick={() => setExpandedCard(expandedCard === 'stay' ? null : 'stay')}
+                  className={`w-full bg-gray-700 rounded-lg p-4 border-2 text-left transition-all hover:bg-gray-600 relative ${
+                    refinanceResult.bestOption === 'stay'
+                      ? 'border-green-500 glow-green scale-[1.02]'
+                      : 'border-gray-600'
+                  }`}
+                >
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center gap-2">
+                      {refinanceResult.bestOption === 'stay' && (
+                        <motion.div
+                          initial={{ scale: 0, opacity: 0 }}
+                          animate={{ scale: 1, opacity: 1 }}
+                          transition={{
+                            type: "spring",
+                            stiffness: 500,
+                            damping: 15,
+                            delay: 0.5,
+                          }}
+                          className="bg-green-500 text-white text-[8.5px] font-bold px-[4.4px] py-[2.2px] rounded-full"
+                        >
+                          BEST OPTION
+                        </motion.div>
+                      )}
+                      <div className="font-semibold text-white">Stay - Do Nothing</div>
+                    </div>
                   <svg
                     className={`w-5 h-5 text-gray-400 transition-transform ${expandedCard === 'stay' ? 'rotate-180' : ''}`}
                     fill="none"
@@ -743,7 +767,9 @@ export default function RefinancePage() {
                   <div className="space-y-2 text-sm mt-3 pt-3 border-t border-gray-600">
                     <div className="flex justify-between text-gray-300">
                       <span>Monthly Payment:</span>
-                      <span className="font-medium text-white">{formatINR(refinanceResult.stay.monthlyPayment)}</span>
+                      <span className="font-medium text-white">
+                        <AnimatedNumber value={refinanceResult.stay.monthlyPayment} className="text-sm" />
+                      </span>
                     </div>
                     <div className="flex justify-between text-gray-300">
                       <span>Tenure:</span>
@@ -751,27 +777,50 @@ export default function RefinancePage() {
                     </div>
                     <div className="flex justify-between text-gray-300">
                       <span>Total Cost:</span>
-                      <span className="font-medium text-white">{formatINR(refinanceResult.stay.totalCost)}</span>
+                      <span className="font-medium text-white">
+                        <AnimatedNumber value={refinanceResult.stay.totalCost} className="text-sm" />
+                      </span>
                     </div>
                   </div>
                 )}
               </button>
+              </motion.div>
 
               {/* Option A Card */}
-              <button
-                type="button"
-                onClick={() => setExpandedCard(expandedCard === 'A' ? null : 'A')}
-                className={`bg-gray-700 rounded-lg p-4 border-2 text-left transition-all hover:bg-gray-600 ${refinanceResult.bestOption === 'A' ? 'border-green-500' : 'border-gray-600'}`}
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.1 }}
+                className={`${refinanceResult.bestOption === 'A' ? '' : 'opacity-75'}`}
               >
-                <div className="flex items-center justify-between mb-2">
-                  <div className="flex items-center gap-2">
-                    {refinanceResult.bestOption === 'A' && (
-                      <div className="bg-green-500 text-white text-[8.5px] font-bold px-[4.4px] py-[2.2px] rounded-full">
-                        Best Option
-                      </div>
-                    )}
-                    <div className="font-semibold text-white">Option A - Prepay Only</div>
-                  </div>
+                <button
+                  type="button"
+                  onClick={() => setExpandedCard(expandedCard === 'A' ? null : 'A')}
+                  className={`w-full bg-gray-700 rounded-lg p-4 border-2 text-left transition-all hover:bg-gray-600 relative ${
+                    refinanceResult.bestOption === 'A'
+                      ? 'border-green-500 glow-green scale-[1.02]'
+                      : 'border-gray-600'
+                  }`}
+                >
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center gap-2">
+                      {refinanceResult.bestOption === 'A' && (
+                        <motion.div
+                          initial={{ scale: 0, opacity: 0 }}
+                          animate={{ scale: 1, opacity: 1 }}
+                          transition={{
+                            type: "spring",
+                            stiffness: 500,
+                            damping: 15,
+                            delay: 0.6,
+                          }}
+                          className="bg-green-500 text-white text-[8.5px] font-bold px-[4.4px] py-[2.2px] rounded-full"
+                        >
+                          BEST OPTION
+                        </motion.div>
+                      )}
+                      <div className="font-semibold text-white">Option A - Prepay Only</div>
+                    </div>
                   <svg
                     className={`w-5 h-5 text-gray-400 transition-transform ${expandedCard === 'A' ? 'rotate-180' : ''}`}
                     fill="none"
@@ -788,14 +837,21 @@ export default function RefinancePage() {
                 ) : (
                   <div className="flex justify-between text-green-400 text-sm">
                     <span className="font-semibold">Savings:</span>
-                    <span className="font-bold">{formatINR(refinanceResult.stay.totalCost - refinanceResult.optionA.totalCost)}</span>
+                    <span className="font-bold">
+                      <AnimatedNumber
+                        value={refinanceResult.stay.totalCost - refinanceResult.optionA.totalCost}
+                        className="text-sm"
+                      />
+                    </span>
                   </div>
                 )}
                 {expandedCard === 'A' && (
                   <div className="space-y-2 text-sm mt-3 pt-3 border-t border-gray-600">
                     <div className="flex justify-between text-gray-300">
                       <span>Monthly Payment:</span>
-                      <span className="font-medium text-white">{formatINR(refinanceResult.optionA.monthlyPayment)}</span>
+                      <span className="font-medium text-white">
+                        <AnimatedNumber value={refinanceResult.optionA.monthlyPayment} className="text-sm" />
+                      </span>
                     </div>
                     <div className="flex justify-between text-gray-300">
                       <span>Tenure:</span>
@@ -803,27 +859,50 @@ export default function RefinancePage() {
                     </div>
                     <div className="flex justify-between text-gray-300">
                       <span>Total Cost:</span>
-                      <span className="font-medium text-white">{formatINR(refinanceResult.optionA.totalCost)}</span>
+                      <span className="font-medium text-white">
+                        <AnimatedNumber value={refinanceResult.optionA.totalCost} className="text-sm" />
+                      </span>
                     </div>
                   </div>
                 )}
               </button>
+              </motion.div>
 
               {/* Option B Card */}
-              <button
-                type="button"
-                onClick={() => setExpandedCard(expandedCard === 'B' ? null : 'B')}
-                className={`bg-gray-700 rounded-lg p-4 border-2 text-left transition-all hover:bg-gray-600 ${refinanceResult.bestOption === 'B' ? 'border-green-500' : 'border-gray-600'}`}
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.2 }}
+                className={`${refinanceResult.bestOption === 'B' ? '' : 'opacity-75'}`}
               >
-                <div className="flex items-center justify-between mb-2">
-                  <div className="flex items-center gap-2">
-                    {refinanceResult.bestOption === 'B' && (
-                      <div className="bg-green-500 text-white text-[8.5px] font-bold px-[4.4px] py-[2.2px] rounded-full">
-                        Best Option
-                      </div>
-                    )}
-                    <div className="font-semibold text-white">Option B - Refinance Only</div>
-                  </div>
+                <button
+                  type="button"
+                  onClick={() => setExpandedCard(expandedCard === 'B' ? null : 'B')}
+                  className={`w-full bg-gray-700 rounded-lg p-4 border-2 text-left transition-all hover:bg-gray-600 relative ${
+                    refinanceResult.bestOption === 'B'
+                      ? 'border-green-500 glow-green scale-[1.02]'
+                      : 'border-gray-600'
+                  }`}
+                >
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center gap-2">
+                      {refinanceResult.bestOption === 'B' && (
+                        <motion.div
+                          initial={{ scale: 0, opacity: 0 }}
+                          animate={{ scale: 1, opacity: 1 }}
+                          transition={{
+                            type: "spring",
+                            stiffness: 500,
+                            damping: 15,
+                            delay: 0.7,
+                          }}
+                          className="bg-green-500 text-white text-[8.5px] font-bold px-[4.4px] py-[2.2px] rounded-full"
+                        >
+                          BEST OPTION
+                        </motion.div>
+                      )}
+                      <div className="font-semibold text-white">Option B - Refinance Only</div>
+                    </div>
                   <svg
                     className={`w-5 h-5 text-gray-400 transition-transform ${expandedCard === 'B' ? 'rotate-180' : ''}`}
                     fill="none"
@@ -840,14 +919,21 @@ export default function RefinancePage() {
                 ) : (
                   <div className="flex justify-between text-green-400 text-sm">
                     <span className="font-semibold">Savings:</span>
-                    <span className="font-bold">{formatINR(refinanceResult.stay.totalCost - refinanceResult.optionB.totalCost)}</span>
+                    <span className="font-bold">
+                      <AnimatedNumber
+                        value={refinanceResult.stay.totalCost - refinanceResult.optionB.totalCost}
+                        className="text-sm"
+                      />
+                    </span>
                   </div>
                 )}
                 {expandedCard === 'B' && (
                   <div className="space-y-2 text-sm mt-3 pt-3 border-t border-gray-600">
                     <div className="flex justify-between text-gray-300">
                       <span>Monthly Payment:</span>
-                      <span className="font-medium text-white">{formatINR(refinanceResult.optionB.monthlyPayment)}</span>
+                      <span className="font-medium text-white">
+                        <AnimatedNumber value={refinanceResult.optionB.monthlyPayment} className="text-sm" />
+                      </span>
                     </div>
                     <div className="flex justify-between text-gray-300">
                       <span>Tenure:</span>
@@ -855,27 +941,50 @@ export default function RefinancePage() {
                     </div>
                     <div className="flex justify-between text-gray-300">
                       <span>Total Cost:</span>
-                      <span className="font-medium text-white">{formatINR(refinanceResult.optionB.totalCost)}</span>
+                      <span className="font-medium text-white">
+                        <AnimatedNumber value={refinanceResult.optionB.totalCost} className="text-sm" />
+                      </span>
                     </div>
                   </div>
                 )}
               </button>
+              </motion.div>
 
               {/* Option C Card */}
-              <button
-                type="button"
-                onClick={() => setExpandedCard(expandedCard === 'C' ? null : 'C')}
-                className={`bg-gray-700 rounded-lg p-4 border-2 text-left transition-all hover:bg-gray-600 ${refinanceResult.bestOption === 'C' ? 'border-green-500' : 'border-gray-600'}`}
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.3 }}
+                className={`${refinanceResult.bestOption === 'C' ? '' : 'opacity-75'}`}
               >
-                <div className="flex items-center justify-between mb-2">
-                  <div className="flex items-center gap-2">
-                    {refinanceResult.bestOption === 'C' && (
-                      <div className="bg-green-500 text-white text-[8.5px] font-bold px-[4.4px] py-[2.2px] rounded-full">
-                        Best Option
-                      </div>
-                    )}
-                    <div className="font-semibold text-white">Option C - Prepay + Refinance</div>
-                  </div>
+                <button
+                  type="button"
+                  onClick={() => setExpandedCard(expandedCard === 'C' ? null : 'C')}
+                  className={`w-full bg-gray-700 rounded-lg p-4 border-2 text-left transition-all hover:bg-gray-600 relative ${
+                    refinanceResult.bestOption === 'C'
+                      ? 'border-green-500 glow-green scale-[1.02]'
+                      : 'border-gray-600'
+                  }`}
+                >
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center gap-2">
+                      {refinanceResult.bestOption === 'C' && (
+                        <motion.div
+                          initial={{ scale: 0, opacity: 0 }}
+                          animate={{ scale: 1, opacity: 1 }}
+                          transition={{
+                            type: "spring",
+                            stiffness: 500,
+                            damping: 15,
+                            delay: 0.8,
+                          }}
+                          className="bg-green-500 text-white text-[8.5px] font-bold px-[4.4px] py-[2.2px] rounded-full"
+                        >
+                          BEST OPTION
+                        </motion.div>
+                      )}
+                      <div className="font-semibold text-white">Option C - Prepay + Refinance</div>
+                    </div>
                   <svg
                     className={`w-5 h-5 text-gray-400 transition-transform ${expandedCard === 'C' ? 'rotate-180' : ''}`}
                     fill="none"
@@ -892,14 +1001,21 @@ export default function RefinancePage() {
                 ) : (
                   <div className="flex justify-between text-green-400 text-sm">
                     <span className="font-semibold">Savings:</span>
-                    <span className="font-bold">{formatINR(refinanceResult.stay.totalCost - refinanceResult.optionC.totalCost)}</span>
+                    <span className="font-bold">
+                      <AnimatedNumber
+                        value={refinanceResult.stay.totalCost - refinanceResult.optionC.totalCost}
+                        className="text-sm"
+                      />
+                    </span>
                   </div>
                 )}
                 {expandedCard === 'C' && (
                   <div className="space-y-2 text-sm mt-3 pt-3 border-t border-gray-600">
                     <div className="flex justify-between text-gray-300">
                       <span>Monthly Payment:</span>
-                      <span className="font-medium text-white">{formatINR(refinanceResult.optionC.monthlyPayment)}</span>
+                      <span className="font-medium text-white">
+                        <AnimatedNumber value={refinanceResult.optionC.monthlyPayment} className="text-sm" />
+                      </span>
                     </div>
                     <div className="flex justify-between text-gray-300">
                       <span>Tenure:</span>
@@ -907,100 +1023,50 @@ export default function RefinancePage() {
                     </div>
                     <div className="flex justify-between text-gray-300">
                       <span>Total Cost:</span>
-                      <span className="font-medium text-white">{formatINR(refinanceResult.optionC.totalCost)}</span>
+                      <span className="font-medium text-white">
+                        <AnimatedNumber value={refinanceResult.optionC.totalCost} className="text-sm" />
+                      </span>
                     </div>
                   </div>
                 )}
               </button>
+              </motion.div>
             </div>
 
             {/* Chart */}
-            <div className="mt-8">
-              <h3 className="text-lg font-medium text-gray-200 mb-4">Total Cost Comparison</h3>
-              <ResponsiveContainer width="100%" minWidth={300} height={chartHeight}>
-                <BarChart
-                  data={[
-                    {
-                      name: "Stay",
-                      totalCost: refinanceResult.stay.totalCost,
-                      isBest: refinanceResult.bestOption === 'stay',
-                    },
-                    {
-                      name: "Option A",
-                      totalCost: refinanceResult.optionA.totalCost,
-                      isBest: refinanceResult.bestOption === 'A',
-                    },
-                    {
-                      name: "Option B",
-                      totalCost: refinanceResult.optionB.totalCost,
-                      isBest: refinanceResult.bestOption === 'B',
-                    },
-                    {
-                      name: "Option C",
-                      totalCost: refinanceResult.optionC.totalCost,
-                      isBest: refinanceResult.bestOption === 'C',
-                    },
-                  ]}
-                  margin={{ top: 20, right: 10, left: 50, bottom: 30 }}
-                >
-                  <XAxis
-                    dataKey="name"
-                    tick={{ fill: '#d1d5db', fontSize: 11 }}
-                    axisLine={{ stroke: '#4b5563' }}
-                    tickLine={{ stroke: '#4b5563' }}
-                    angle={-45}
-                    textAnchor="end"
-                    height={60}
-                  />
-                  <YAxis
-                    tick={{ fill: '#d1d5db', fontSize: 10 }}
-                    axisLine={{ stroke: '#4b5563' }}
-                    tickLine={{ stroke: '#4b5563' }}
-                    tickFormatter={(value) => formatCurrencyShort(value)}
-                    width={50}
-                  />
-                  <Tooltip
-                    contentStyle={{
-                      backgroundColor: '#1f2937',
-                      border: '1px solid #4b5563',
-                      borderRadius: '8px',
-                      color: '#f3f4f6',
-                    }}
-                    formatter={(value: number | undefined) => [
-                      formatINR(value ?? 0),
-                      'Total Cost'
-                    ]}
-                    labelFormatter={(label) => `${label}:`}
-                  />
-                  <Bar
-                    dataKey="totalCost"
-                    radius={[8, 8, 0, 0]}
-                  >
-                    {[
-                      { name: "Stay", isBest: refinanceResult.bestOption === 'stay' },
-                      { name: "Option A", isBest: refinanceResult.bestOption === 'A' },
-                      { name: "Option B", isBest: refinanceResult.bestOption === 'B' },
-                      { name: "Option C", isBest: refinanceResult.bestOption === 'C' },
-                    ].map((entry, index) => (
-                      <Cell
-                        key={`cell-${index}`}
-                        fill={entry.isBest ? '#22c55e' : '#3b82f6'}
-                      />
-                    ))}
-                  </Bar>
-                </BarChart>
-              </ResponsiveContainer>
-              <div className="mt-4 flex flex-wrap justify-center gap-4 text-xs md:text-sm">
-                <div className="flex items-center gap-2">
-                  <div className="w-3 h-3 md:w-4 md:h-4 rounded bg-blue-500"></div>
-                  <span className="text-gray-300">Standard Option</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <div className="w-3 h-3 md:w-4 md:h-4 rounded bg-green-500"></div>
-                  <span className="text-gray-300">Best Option</span>
-                </div>
-              </div>
-            </div>
+            <motion.div
+              className="mt-8"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.6 }}
+            >
+              <AnimatedBarChart
+                title="Total Cost Comparison"
+                delay={0.6}
+                data={[
+                  {
+                    name: "Stay",
+                    value: refinanceResult.stay.totalCost,
+                    color: refinanceResult.bestOption === 'stay' ? '#22c55e' : '#3b82f6',
+                  },
+                  {
+                    name: "Prepay Only",
+                    value: refinanceResult.optionA.totalCost,
+                    color: refinanceResult.bestOption === 'A' ? '#22c55e' : '#3b82f6',
+                  },
+                  {
+                    name: "Refinance Only",
+                    value: refinanceResult.optionB.totalCost,
+                    color: refinanceResult.bestOption === 'B' ? '#22c55e' : '#3b82f6',
+                  },
+                  {
+                    name: "Prepay + Refi",
+                    value: refinanceResult.optionC.totalCost,
+                    color: refinanceResult.bestOption === 'C' ? '#22c55e' : '#3b82f6',
+                  },
+                ]}
+              />
+            </motion.div>
 
             {/* Export Buttons */}
             <ExportButtons
@@ -1011,6 +1077,6 @@ export default function RefinancePage() {
           </div>
         )}
       </div>
-    </div>
+    </motion.div>
   );
 }

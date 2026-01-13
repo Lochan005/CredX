@@ -1,13 +1,19 @@
 "use client";
 
 import React, { useState, useMemo, useEffect } from "react";
-import Link from "next/link";
+import { motion } from "framer-motion";
 import { calculateScenario2 } from "../lib/calculator";
 import LoanInputs from "../components/LoanInputs";
 import ExportButtons from "../components/ExportButtons";
+import ResultsReveal from "../components/ResultsReveal";
+import SavingsHighlight from "../components/SavingsHighlight";
+import ComparisonTable from "../components/ComparisionTable";
+import AnimatedNumber from "../components/AnimatedNumber";
+import { AnimatedPieChart, AnimatedBarChart } from "../components/AnimatedCharts";
+import BackButton from "../components/BackButton";
+import { fadeIn } from "../lib/animation";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
-import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
 
 // Validation constants
 const VALIDATION_RULES = {
@@ -346,20 +352,19 @@ export default function MonthlyExtraPage() {
     window.open(`https://wa.me/?text=${encodedMessage}`, "_blank");
   };
 
+  // Calculate values for comparison table
+  const interestWithout = result ? result.totalCostWithoutExtra - principal : 0;
+  const interestWith = result ? result.totalCostWithExtra - principal - result.totalExtraPaid : 0;
+
   return (
-    <div className="min-h-screen bg-gray-900 flex flex-col items-center px-2 py-4 md:py-8">
+    <motion.div
+      className="min-h-screen bg-gray-900 flex flex-col items-center px-2 py-4 md:py-8"
+      {...fadeIn}
+    >
       {/* Header Section */}
       <div className="w-full max-w-4xl mx-auto mb-6">
         <div className="flex items-center justify-between mb-4">
-          <Link
-            href="/"
-            className="text-gray-400 hover:text-green-400 transition-colors flex items-center gap-2"
-          >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-            </svg>
-            Back to Home
-          </Link>
+          <BackButton />
           <h1 className="text-2xl md:text-3xl font-bold text-white">
             Monthly Extra Payment
           </h1>
@@ -377,7 +382,11 @@ export default function MonthlyExtraPage() {
       {/* Main Content */}
       <div className="w-full max-w-4xl mx-auto flex flex-col md:flex-row gap-6">
         {/* Left: Inputs */}
-        <div className="bg-gray-800 rounded-2xl shadow-lg flex-1 p-6">
+        <motion.div
+          className="bg-gray-800 rounded-2xl shadow-lg flex-1 p-6"
+          {...fadeIn}
+          transition={{ delay: 0.1 }}
+        >
           <h2 className="text-xl font-semibold text-white mb-4">Loan Details</h2>
           <LoanInputs
             principal={principal}
@@ -391,7 +400,11 @@ export default function MonthlyExtraPage() {
             showValidation={true}
           />
 
-          <div className="mt-6">
+          <motion.div
+            className="mt-6"
+            {...fadeIn}
+            transition={{ delay: 0.2 }}
+          >
             <h2 className="text-xl font-semibold text-white mb-4">Extra Payment</h2>
             <MoneyInput
               label="Monthly Extra Amount"
@@ -406,11 +419,15 @@ export default function MonthlyExtraPage() {
               error={validate.monthlyExtra}
               helperText={`Range: ${formatINR(VALIDATION_RULES.monthlyExtra.min)} - ${formatINR(VALIDATION_RULES.monthlyExtra.max)}`}
             />
-          </div>
-        </div>
+          </motion.div>
+        </motion.div>
 
         {/* Right: Results */}
-        <div className={`bg-gray-800 rounded-2xl shadow-lg flex-1 p-6 min-w-[0] ${!isValid ? "opacity-50 pointer-events-none" : ""}`}>
+        <motion.div
+          className={`bg-gray-800 rounded-2xl shadow-lg flex-1 p-6 min-w-[0] ${!isValid ? "opacity-50 pointer-events-none" : ""}`}
+          {...fadeIn}
+          transition={{ delay: 0.3 }}
+        >
           <h2 className="text-xl font-semibold text-white mb-4">
             Payment Impact
             {!isValid && (
@@ -419,194 +436,109 @@ export default function MonthlyExtraPage() {
           </h2>
 
           {isValid && result && (
-            <>
+            <ResultsReveal>
               {/* Interest Saved */}
-              <div className="mb-6 text-center">
-                <div className="text-base text-gray-400 font-medium uppercase tracking-wide mb-1">
-                  Interest Saved
-                </div>
-                <div className="font-extrabold text-3xl md:text-4xl text-green-400 mb-1 select-all">
-                  {formatINR(result.interestSaved)}
-                </div>
-                {result.tenureReduced > 0 && (
-                  <div className="mt-2 text-base text-gray-200 font-medium">
-                    Tenure Reduced:&nbsp;
-                    <span className="text-green-300 font-semibold">
-                      {result.tenureReduced} months
-                    </span>
-                    &nbsp;(
-                    <span className="text-green-300">
-                      {formatMonthsYears(result.tenureReduced)}
-                    </span>
-                    )
-                  </div>
-                )}
-              </div>
+              <SavingsHighlight value={result.interestSaved} />
 
-              {/* Key Metrics */}
-              <div className="mb-5 space-y-3">
-                <div className="flex justify-between items-center p-3 bg-gray-700 rounded-lg">
-                  <span className="text-gray-300">Original EMI</span>
-                  <span className="text-white font-semibold">{formatINR(result.emi)}</span>
+              {/* Tenure Reduced */}
+              {result.tenureReduced > 0 && (
+                <div className="mb-6 text-center">
+                  <p className="text-sm text-gray-400 uppercase tracking-wider mb-2">
+                    Tenure Reduced
+                  </p>
+                  <div className="flex items-center justify-center gap-2 text-green-500">
+                    <AnimatedNumber
+                      value={result.tenureReduced}
+                      prefix=""
+                      className="text-2xl md:text-3xl font-bold"
+                    />
+                    <span className="text-lg md:text-xl font-semibold">months</span>
+                    <span className="text-gray-400">({formatMonthsYears(result.tenureReduced)})</span>
+                  </div>
                 </div>
-                <div className="flex justify-between items-center p-3 bg-gray-700 rounded-lg">
-                  <span className="text-gray-300">Effective Monthly Payment</span>
-                  <span className="text-green-400 font-semibold">{formatINR(result.effectiveMonthlyPayment)}</span>
-                </div>
-                <div className="flex justify-between items-center p-3 bg-gray-700 rounded-lg">
-                  <span className="text-gray-300">Total Extra You'll Pay</span>
-                  <span className="text-white font-semibold">{formatINR(result.totalExtraPaid)}</span>
+              )}
+
+              {/* Effective Monthly Payment */}
+              <div className="mb-6 text-center">
+                <p className="text-sm text-gray-400 uppercase tracking-wider mb-2">
+                  Effective Monthly Payment
+                </p>
+                <div className="text-green-500">
+                  <AnimatedNumber
+                    value={result.effectiveMonthlyPayment}
+                    className="text-2xl md:text-3xl font-bold"
+                  />
+                  <span className="text-sm text-gray-400 ml-2">
+                    (EMI: {formatINR(result.emi)} + Extra: {formatINR(monthlyExtra)})
+                  </span>
                 </div>
               </div>
 
               {/* Comparison Table */}
               <div className="mb-5">
-                <div className="w-full mb-4 rounded-lg overflow-hidden border border-gray-700">
-                  <div className="grid grid-cols-3 bg-gray-700 text-gray-200 text-center text-sm">
-                    <div className="p-2 font-semibold text-left pl-4"></div>
-                    <div className="p-2 font-semibold">Without Extra</div>
-                    <div className="p-2 font-semibold">With Extra</div>
-                  </div>
-                  <div className="grid grid-cols-3 bg-gray-800 text-gray-200 text-center text-base">
-                    <div className="p-2 text-left pl-4">Total Cost</div>
-                    <div className="p-2 font-medium text-gray-400">{formatINR(result.totalCostWithoutExtra)}</div>
-                    <div className="p-2 font-medium text-green-400">{formatINR(result.totalCostWithExtra)}</div>
-                  </div>
-                  <div className="grid grid-cols-3 bg-gray-800 text-gray-200 text-center text-base border-t border-gray-700">
-                    <div className="p-2 text-left pl-4">Tenure</div>
-                    <div className="p-2 font-medium text-gray-400">
-                      {result.remainingTenure} months
-                    </div>
-                    <div className="p-2 font-medium text-green-400">
-                      {result.newTenure} months
-                    </div>
-                  </div>
-                </div>
+                <ComparisonTable
+                  beforeLabel="Without Extra"
+                  afterLabel="With Extra"
+                  data={[
+                    {
+                      label: "Total Cost",
+                      before: result.totalCostWithoutExtra,
+                      after: result.totalCostWithExtra,
+                    },
+                    {
+                      label: "Tenure",
+                      before: `${result.remainingTenure} months`,
+                      after: `${result.newTenure} months`,
+                    },
+                    {
+                      label: "Interest Paid",
+                      before: interestWithout,
+                      after: interestWith,
+                      highlight: true,
+                    },
+                  ]}
+                />
               </div>
 
               {/* Charts */}
-              <div className="mt-8 bg-gray-800 rounded-2xl shadow-lg p-3 md:p-6">
-                <h2 className="text-xl font-semibold text-white mb-6 flex items-center gap-2">
-                  <svg className="w-6 h-6 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-                  </svg>
-                  Visual Analysis
-                </h2>
-
+              <motion.div
+                className="mt-8"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 0.4 }}
+              >
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                   {/* Pie Chart */}
-                  <div>
-                    <h3 className="text-lg font-medium text-gray-200 mb-4">Payment Breakdown</h3>
-                    <ResponsiveContainer width="100%" minWidth={250} height={chartHeight}>
-                      <PieChart>
-                        <Pie
-                          data={[
-                            { name: "Principal", value: principal, color: "#3b82f6" },
-                            { name: "Interest (With Extra)", value: Math.max(0, result.totalCostWithExtra - principal - result.totalExtraPaid), color: "#ef4444" },
-                            { name: "Interest Saved", value: result.interestSaved, color: "#22c55e" },
-                          ]}
-                          cx="50%"
-                          cy="50%"
-                          labelLine={false}
-                          label={false}
-                          outerRadius={70}
-                          fill="#8884d8"
-                          dataKey="value"
-                        >
-                          <Cell key="principal" fill="#3b82f6" />
-                          <Cell key="interest" fill="#ef4444" />
-                          <Cell key="saved" fill="#22c55e" />
-                        </Pie>
-                        <Tooltip
-                          contentStyle={{
-                            backgroundColor: '#1f2937',
-                            border: '1px solid #4b5563',
-                            borderRadius: '8px',
-                            color: '#f3f4f6',
-                          }}
-                          formatter={(value: number | undefined, name: string | undefined) => [
-                            formatINR(value ?? 0),
-                            name ?? ''
-                          ]}
-                        />
-                      </PieChart>
-                    </ResponsiveContainer>
-                    <div className="mt-4 flex flex-wrap justify-center gap-3 text-[11px] text-gray-300">
-                      {[
-                        { name: "Principal", color: "#3b82f6" },
-                        { name: "Interest (With Extra)", color: "#ef4444" },
-                        { name: "Interest Saved", color: "#22c55e" },
-                      ].map((item, index) => (
-                        <div key={index} className="flex items-center gap-1.5">
-                          <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: item.color }}></div>
-                          <span>{item.name}</span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
+                  <AnimatedPieChart
+                    title="Payment Breakdown"
+                    delay={0.3}
+                    data={[
+                      { name: "Principal", value: principal, color: "#3b82f6" },
+                      { name: "Interest (With Extra)", value: Math.max(0, result.totalCostWithExtra - principal - result.totalExtraPaid), color: "#ef4444" },
+                      { name: "Interest Saved", value: result.interestSaved, color: "#22c55e" },
+                    ]}
+                  />
 
                   {/* Bar Chart */}
-                  <div>
-                    <h3 className="text-lg font-medium text-gray-200 mb-4">Cost Comparison</h3>
-                    <ResponsiveContainer width="100%" minWidth={300} height={chartHeight}>
-                      <BarChart
-                        data={[
-                          {
-                            name: "Without",
-                            Principal: principal,
-                            Interest: result.totalCostWithoutExtra - principal,
-                          },
-                          {
-                            name: "With Extra",
-                            Principal: principal,
-                            Interest: result.totalCostWithExtra - principal - result.totalExtraPaid,
-                          },
-                        ]}
-                        margin={{ top: 20, right: 10, left: 50, bottom: 30 }}
-                      >
-                        <XAxis
-                          dataKey="name"
-                          tick={{ fill: '#d1d5db', fontSize: 11 }}
-                          axisLine={{ stroke: '#4b5563' }}
-                          tickLine={{ stroke: '#4b5563' }}
-                        />
-                        <YAxis
-                          tick={{ fill: '#d1d5db', fontSize: 10 }}
-                          axisLine={{ stroke: '#4b5563' }}
-                          tickLine={{ stroke: '#4b5563' }}
-                          tickFormatter={(value) => formatCurrencyShort(value)}
-                          width={50}
-                        />
-                        <Tooltip
-                          contentStyle={{
-                            backgroundColor: '#1f2937',
-                            border: '1px solid #4b5563',
-                            borderRadius: '8px',
-                            color: '#f3f4f6',
-                          }}
-                          formatter={(value: number | undefined, name: string | undefined) => [
-                            formatINR(value ?? 0),
-                            name === 'Principal' ? 'Principal' : 'Interest'
-                          ]}
-                          labelFormatter={(label) => `${label}:`}
-                        />
-                        <Bar dataKey="Principal" stackId="a" fill="#3b82f6" radius={[0, 0, 0, 0]} />
-                        <Bar dataKey="Interest" stackId="a" fill="#ef4444" radius={[8, 8, 0, 0]} />
-                      </BarChart>
-                    </ResponsiveContainer>
-                    <div className="mt-4 flex flex-wrap justify-center gap-3 text-[11px] text-gray-300">
-                      <div className="flex items-center gap-1.5">
-                        <div className="w-2.5 h-2.5 rounded bg-blue-500"></div>
-                        <span>Principal</span>
-                      </div>
-                      <div className="flex items-center gap-1.5">
-                        <div className="w-2.5 h-2.5 rounded bg-red-500"></div>
-                        <span>Interest</span>
-                      </div>
-                    </div>
-                  </div>
+                  <AnimatedBarChart
+                    title="Cost Comparison"
+                    delay={0.5}
+                    stacked={true}
+                    data={[
+                      {
+                        name: "Without Extra",
+                        principal: principal,
+                        interest: interestWithout,
+                      },
+                      {
+                        name: "With Monthly Extra",
+                        principal: principal,
+                        interest: interestWith,
+                      },
+                    ]}
+                  />
                 </div>
-              </div>
+              </motion.div>
 
               {/* Export Buttons */}
               <ExportButtons
@@ -614,10 +546,10 @@ export default function MonthlyExtraPage() {
                 onShareWhatsApp={shareOnWhatsApp}
                 isGeneratingPDF={isGeneratingPDF}
               />
-            </>
+            </ResultsReveal>
           )}
-        </div>
+        </motion.div>
       </div>
-    </div>
+    </motion.div>
   );
 }

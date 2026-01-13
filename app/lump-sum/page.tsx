@@ -1,13 +1,20 @@
 "use client";
 
 import React, { useState, useMemo, useEffect } from "react";
-import Link from "next/link";
+import { motion } from "framer-motion";
 import { calculatePrepaymentScenario, calculatePrepaymentScenario1B } from "../lib/calculator";
 import LoanInputs from "../components/LoanInputs";
 import ExportButtons from "../components/ExportButtons";
+import ResultsReveal from "../components/ResultsReveal";
+import SavingsHighlight from "../components/SavingsHighlight";
+import ComparisonTable from "../components/ComparisionTable";
+import AnimatedNumber from "../components/AnimatedNumber";
+import { AnimatedPieChart, AnimatedBarChart } from "../components/AnimatedCharts";
+import AnimatedToggle from "../components/AnimatedToggle";
+import BackButton from "../components/BackButton";
+import { fadeIn } from "../lib/animation";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
-import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
 
 // Validation constants
 const VALIDATION_RULES = {
@@ -436,20 +443,33 @@ export default function LumpSumPage() {
     ? reduceEMIResult.totalCostWithPrepay
     : 0;
 
+  const interestWithout = scenario === '1A' && reduceTenureResult
+    ? reduceTenureResult.totalCostWithoutPrepay - principal
+    : scenario === '1B' && reduceEMIResult
+    ? reduceEMIResult.totalCostWithoutPrepay - principal
+    : 0;
+
+  const interestWith = scenario === '1A' && reduceTenureResult
+    ? reduceTenureResult.totalCostWithPrepay - principal - prepaymentAmount
+    : scenario === '1B' && reduceEMIResult
+    ? reduceEMIResult.totalCostWithPrepay - principal - prepaymentAmount
+    : 0;
+
+  const interestSaved = scenario === '1A' && reduceTenureResult
+    ? reduceTenureResult.interestSaved
+    : scenario === '1B' && reduceEMIResult
+    ? reduceEMIResult.interestSaved
+    : 0;
+
   return (
-    <div className="min-h-screen bg-gray-900 flex flex-col items-center px-2 py-4 md:py-8">
+    <motion.div
+      className="min-h-screen bg-gray-900 flex flex-col items-center px-2 py-4 md:py-8"
+      {...fadeIn}
+    >
       {/* Header Section */}
       <div className="w-full max-w-4xl mx-auto mb-6">
         <div className="flex items-center justify-between mb-4">
-          <Link
-            href="/"
-            className="text-gray-400 hover:text-green-400 transition-colors flex items-center gap-2"
-          >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-            </svg>
-            Back to Home
-          </Link>
+          <BackButton />
           <h1 className="text-2xl md:text-3xl font-bold text-white">
             Lump Sum Prepayment
           </h1>
@@ -457,29 +477,15 @@ export default function LumpSumPage() {
         </div>
 
         {/* Toggle */}
-        <div className="flex gap-2 mb-4">
-          <button
-            type="button"
-            onClick={() => setScenario('1A')}
-            className={`flex-1 px-4 py-2 rounded-full font-medium transition-colors ${
-              scenario === '1A'
-                ? "bg-green-500 text-white"
-                : "bg-gray-800 text-gray-300 hover:bg-gray-700"
-            }`}
-          >
-            Reduce Tenure
-          </button>
-          <button
-            type="button"
-            onClick={() => setScenario('1B')}
-            className={`flex-1 px-4 py-2 rounded-full font-medium transition-colors ${
-              scenario === '1B'
-                ? "bg-green-500 text-white"
-                : "bg-gray-800 text-gray-300 hover:bg-gray-700"
-            }`}
-          >
-            Reduce EMI
-          </button>
+        <div className="mb-4">
+          <AnimatedToggle
+            options={[
+              { value: '1A', label: 'Reduce Tenure' },
+              { value: '1B', label: 'Reduce EMI' }
+            ]}
+            selected={scenario}
+            onChange={(value) => setScenario(value as '1A' | '1B')}
+          />
         </div>
 
         {/* Description */}
@@ -495,7 +501,11 @@ export default function LumpSumPage() {
       {/* Main Content */}
       <div className="w-full max-w-4xl mx-auto flex flex-col md:flex-row gap-6">
         {/* Left: Inputs */}
-        <div className="bg-gray-800 rounded-2xl shadow-lg flex-1 p-6">
+        <motion.div
+          className="bg-gray-800 rounded-2xl shadow-lg flex-1 p-6"
+          {...fadeIn}
+          transition={{ delay: 0.1 }}
+        >
           <h2 className="text-xl font-semibold text-white mb-4">Loan Details</h2>
           <LoanInputs
             principal={principal}
@@ -509,7 +519,11 @@ export default function LumpSumPage() {
             showValidation={true}
           />
 
-          <div className="mt-6">
+          <motion.div
+            className="mt-6"
+            {...fadeIn}
+            transition={{ delay: 0.2 }}
+          >
             <h2 className="text-xl font-semibold text-white mb-4">Prepayment</h2>
             <MoneyInput
               label="Prepayment Amount"
@@ -524,11 +538,15 @@ export default function LumpSumPage() {
               error={prepaymentError}
               helperText={outstandingPrincipal > 0 ? `Range: ₹0 - ${formatINR(Math.max(0, outstandingPrincipal - 1))}` : undefined}
             />
-          </div>
-        </div>
+          </motion.div>
+        </motion.div>
 
         {/* Right: Results */}
-        <div className={`bg-gray-800 rounded-2xl shadow-lg flex-1 p-6 min-w-[0] ${!isValid ? "opacity-50 pointer-events-none" : ""}`}>
+        <motion.div
+          className={`bg-gray-800 rounded-2xl shadow-lg flex-1 p-6 min-w-[0] ${!isValid ? "opacity-50 pointer-events-none" : ""}`}
+          {...fadeIn}
+          transition={{ delay: 0.3 }}
+        >
           <h2 className="text-xl font-semibold text-white mb-4">
             Prepayment Impact
             {!isValid && (
@@ -537,237 +555,132 @@ export default function LumpSumPage() {
           </h2>
 
           {isValid && result && (
-            <>
+            <ResultsReveal>
               {/* Interest Saved */}
-              <div className="mb-6 text-center">
-                <div className="text-base text-gray-400 font-medium uppercase tracking-wide mb-1">
-                  Interest Saved
-                </div>
-                <div className="font-extrabold text-3xl md:text-4xl text-green-400 mb-1 select-all">
-                  {scenario === '1A' && reduceTenureResult
-                    ? formatINR(reduceTenureResult.interestSaved)
-                    : scenario === '1B' && reduceEMIResult
-                    ? formatINR(reduceEMIResult.interestSaved)
-                    : "-"}
-                </div>
-                {scenario === '1A' && reduceTenureResult?.tenureReduced && reduceTenureResult.tenureReduced > 0 && (
-                  <div className="mt-2 text-base text-gray-200 font-medium">
-                    Tenure Reduced:&nbsp;
-                    <span className="text-green-300 font-semibold">
-                      {reduceTenureResult.tenureReduced} months
-                    </span>
-                    &nbsp;(
-                    <span className="text-green-300">
-                      {formatMonthsYears(reduceTenureResult.tenureReduced)}
-                    </span>
-                    )
+              <SavingsHighlight value={interestSaved} />
+
+              {/* Tenure Reduced / Monthly Benefit */}
+              {scenario === '1A' && reduceTenureResult?.tenureReduced && reduceTenureResult.tenureReduced > 0 && (
+                <div className="mb-6 text-center">
+                  <p className="text-sm text-gray-400 uppercase tracking-wider mb-2">
+                    Tenure Reduced
+                  </p>
+                  <div className="flex items-center justify-center gap-2 text-green-500">
+                    <AnimatedNumber
+                      value={reduceTenureResult.tenureReduced}
+                      prefix=""
+                      className="text-2xl md:text-3xl font-bold"
+                    />
+                    <span className="text-lg md:text-xl font-semibold">months</span>
+                    <span className="text-gray-400">({formatMonthsYears(reduceTenureResult.tenureReduced)})</span>
                   </div>
-                )}
-                {scenario === '1B' && reduceEMIResult?.monthlyBenefit && reduceEMIResult.monthlyBenefit > 0 && (
-                  <div className="mt-2 text-base text-gray-200 font-medium">
-                    You save&nbsp;
-                    <span className="text-green-300 font-semibold text-lg">
-                      {formatINR(reduceEMIResult.monthlyBenefit)}
-                    </span>
-                    &nbsp;every month
+                </div>
+              )}
+              {scenario === '1B' && reduceEMIResult?.monthlyBenefit && reduceEMIResult.monthlyBenefit > 0 && (
+                <div className="mb-6 text-center">
+                  <p className="text-sm text-gray-400 uppercase tracking-wider mb-2">
+                    Monthly Savings
+                  </p>
+                  <div className="text-green-500">
+                    <AnimatedNumber
+                      value={reduceEMIResult.monthlyBenefit}
+                      className="text-2xl md:text-3xl font-bold"
+                    />
+                    <span className="text-lg md:text-xl font-semibold ml-2">per month</span>
                   </div>
-                )}
-              </div>
+                </div>
+              )}
 
               {/* Comparison Table */}
               <div className="mb-5">
-                <div className="w-full mb-4 rounded-lg overflow-hidden border border-gray-700">
-                  <div className="grid grid-cols-3 bg-gray-700 text-gray-200 text-center text-sm">
-                    <div className="p-2 font-semibold text-left pl-4"></div>
-                    <div className="p-2 font-semibold">Without Prepayment</div>
-                    <div className="p-2 font-semibold">With Prepayment</div>
-                  </div>
-                  <div className="grid grid-cols-3 bg-gray-800 text-gray-200 text-center text-base">
-                    <div className="p-2 text-left pl-4">Total Cost</div>
-                    <div className="p-2 font-medium text-gray-400">{formatINR(totalWithout)}</div>
-                    <div className="p-2 font-medium text-green-400">{formatINR(totalWith)}</div>
-                  </div>
-                  {scenario === '1A' && reduceTenureResult && (
-                    <div className="grid grid-cols-3 bg-gray-800 text-gray-200 text-center text-base border-t border-gray-700">
-                      <div className="p-2 text-left pl-4">Tenure</div>
-                      <div className="p-2 font-medium text-gray-400">
-                        {reduceTenureResult.remainingTenure} months
-                      </div>
-                      <div className="p-2 font-medium text-green-400">
-                        {reduceTenureResult.newTenureAfterPrepay} months
-                      </div>
-                    </div>
-                  )}
-                  {scenario === '1B' && reduceEMIResult && (
-                    <div className="grid grid-cols-3 bg-gray-800 text-gray-200 text-center text-base border-t border-gray-700">
-                      <div className="p-2 text-left pl-4">EMI</div>
-                      <div className="p-2 font-medium text-gray-400">
-                        {formatINR(reduceEMIResult.emi)}
-                      </div>
-                      <div className="p-2 font-medium text-green-400">
-                        {formatINR(reduceEMIResult.newEmi)}
-                      </div>
-                    </div>
-                  )}
-                </div>
+                <ComparisonTable
+                  data={[
+                    {
+                      label: "Total Cost",
+                      before: totalWithout,
+                      after: totalWith,
+                    },
+                    ...(scenario === '1A' && reduceTenureResult
+                      ? [
+                          {
+                            label: "Tenure",
+                            before: `${reduceTenureResult.remainingTenure} months`,
+                            after: `${reduceTenureResult.newTenureAfterPrepay} months`,
+                          },
+                        ]
+                      : scenario === '1B' && reduceEMIResult
+                      ? [
+                          {
+                            label: "EMI",
+                            before: reduceEMIResult.emi,
+                            after: reduceEMIResult.newEmi,
+                          },
+                        ]
+                      : []),
+                    {
+                      label: "Interest Paid",
+                      before: interestWithout,
+                      after: interestWith,
+                      highlight: true,
+                    },
+                  ]}
+                />
               </div>
 
               {/* Charts */}
-              <div className="mt-8 bg-gray-800 rounded-2xl shadow-lg p-3 md:p-6">
-                <h2 className="text-xl font-semibold text-white mb-6 flex items-center gap-2">
-                  <svg className="w-6 h-6 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-                  </svg>
-                  Visual Analysis
-                </h2>
-
+              <motion.div
+                className="mt-8"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 0.4 }}
+              >
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                   {/* Pie Chart */}
-                  <div>
-                    <h3 className="text-lg font-medium text-gray-200 mb-4">Payment Breakdown</h3>
-                    <ResponsiveContainer width="100%" minWidth={250} height={chartHeight}>
-                      <PieChart>
-                        <Pie
-                          data={(() => {
-                            if (scenario === '1A' && reduceTenureResult) {
-                              const principalAmount = principal;
-                              const interestWith = totalWith - principalAmount - prepaymentAmount;
-                              const interestSaved = reduceTenureResult.interestSaved;
-                              return [
-                                { name: "Principal", value: principalAmount, color: "#3b82f6" },
-                                { name: "Interest (With Prepay)", value: Math.max(0, interestWith), color: "#ef4444" },
-                                { name: "Interest Saved", value: interestSaved, color: "#22c55e" },
-                              ];
-                            } else if (scenario === '1B' && reduceEMIResult) {
-                              const principalAmount = principal;
-                              const interestWith = reduceEMIResult.totalCostWithPrepay - principalAmount - prepaymentAmount;
-                              const interestSaved = reduceEMIResult.interestSaved;
-                              return [
-                                { name: "Principal", value: principalAmount, color: "#3b82f6" },
-                                { name: "Interest (With Prepay)", value: Math.max(0, interestWith), color: "#ef4444" },
-                                { name: "Interest Saved", value: interestSaved, color: "#22c55e" },
-                              ];
-                            }
-                            return [];
-                          })()}
-                          cx="50%"
-                          cy="50%"
-                          labelLine={false}
-                          label={false}
-                          outerRadius={70}
-                          fill="#8884d8"
-                          dataKey="value"
-                        >
-                          {(() => {
-                            if (scenario === '1A' && reduceTenureResult) {
-                              return [
-                                <Cell key="principal" fill="#3b82f6" />,
-                                <Cell key="interest" fill="#ef4444" />,
-                                <Cell key="saved" fill="#22c55e" />,
-                              ];
-                            } else if (scenario === '1B' && reduceEMIResult) {
-                              return [
-                                <Cell key="principal" fill="#3b82f6" />,
-                                <Cell key="interest" fill="#ef4444" />,
-                                <Cell key="saved" fill="#22c55e" />,
-                              ];
-                            }
-                            return [];
-                          })()}
-                        </Pie>
-                        <Tooltip
-                          contentStyle={{
-                            backgroundColor: '#1f2937',
-                            border: '1px solid #4b5563',
-                            borderRadius: '8px',
-                            color: '#f3f4f6',
-                          }}
-                          formatter={(value: number | undefined, name: string | undefined) => [
-                            formatINR(value ?? 0),
-                            name ?? ''
-                          ]}
-                        />
-                      </PieChart>
-                    </ResponsiveContainer>
-                    <div className="mt-4 flex flex-wrap justify-center gap-3 text-[11px] text-gray-300">
-                      {(() => {
-                        const pieData = [
-                          { name: "Principal", color: "#3b82f6" },
-                          { name: "Interest (With Prepay)", color: "#ef4444" },
-                          { name: "Interest Saved", color: "#22c55e" },
+                  <AnimatedPieChart
+                    title="Payment Breakdown"
+                    delay={0.3}
+                    data={(() => {
+                      if (scenario === '1A' && reduceTenureResult) {
+                        const principalAmount = principal;
+                        const interestWithPrepay = totalWith - principalAmount - prepaymentAmount;
+                        return [
+                          { name: "Principal", value: principalAmount, color: "#3b82f6" },
+                          { name: "Interest (With Prepay)", value: Math.max(0, interestWithPrepay), color: "#ef4444" },
+                          { name: "Interest Saved", value: interestSaved, color: "#22c55e" },
                         ];
-                        return pieData.map((item, index) => (
-                          <div key={index} className="flex items-center gap-1.5">
-                            <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: item.color }}></div>
-                            <span>{item.name}</span>
-                          </div>
-                        ));
-                      })()}
-                    </div>
-                  </div>
+                      } else if (scenario === '1B' && reduceEMIResult) {
+                        const principalAmount = principal;
+                        const interestWithPrepay = reduceEMIResult.totalCostWithPrepay - principalAmount - prepaymentAmount;
+                        return [
+                          { name: "Principal", value: principalAmount, color: "#3b82f6" },
+                          { name: "Interest (With Prepay)", value: Math.max(0, interestWithPrepay), color: "#ef4444" },
+                          { name: "Interest Saved", value: interestSaved, color: "#22c55e" },
+                        ];
+                      }
+                      return [];
+                    })()}
+                  />
 
                   {/* Bar Chart */}
-                  <div>
-                    <h3 className="text-lg font-medium text-gray-200 mb-4">Cost Comparison</h3>
-                    <ResponsiveContainer width="100%" minWidth={300} height={chartHeight}>
-                      <BarChart
-                        data={[
-                          {
-                            name: "Without",
-                            Principal: principal,
-                            Interest: totalWithout - principal,
-                          },
-                          {
-                            name: "With Prepay",
-                            Principal: principal,
-                            Interest: totalWith - principal - prepaymentAmount,
-                          },
-                        ]}
-                        margin={{ top: 20, right: 10, left: 50, bottom: 30 }}
-                      >
-                        <XAxis
-                          dataKey="name"
-                          tick={{ fill: '#d1d5db', fontSize: 11 }}
-                          axisLine={{ stroke: '#4b5563' }}
-                          tickLine={{ stroke: '#4b5563' }}
-                        />
-                        <YAxis
-                          tick={{ fill: '#d1d5db', fontSize: 10 }}
-                          axisLine={{ stroke: '#4b5563' }}
-                          tickLine={{ stroke: '#4b5563' }}
-                          tickFormatter={(value) => formatCurrencyShort(value)}
-                          width={50}
-                        />
-                        <Tooltip
-                          contentStyle={{
-                            backgroundColor: '#1f2937',
-                            border: '1px solid #4b5563',
-                            borderRadius: '8px',
-                            color: '#f3f4f6',
-                          }}
-                          formatter={(value: number | undefined, name: string | undefined) => [
-                            formatINR(value ?? 0),
-                            name === 'Principal' ? 'Principal' : 'Interest'
-                          ]}
-                          labelFormatter={(label) => `${label}:`}
-                        />
-                        <Bar dataKey="Principal" stackId="a" fill="#3b82f6" radius={[0, 0, 0, 0]} />
-                        <Bar dataKey="Interest" stackId="a" fill="#ef4444" radius={[8, 8, 0, 0]} />
-                      </BarChart>
-                    </ResponsiveContainer>
-                    <div className="mt-4 flex flex-wrap justify-center gap-3 text-[11px] text-gray-300">
-                      <div className="flex items-center gap-1.5">
-                        <div className="w-2.5 h-2.5 rounded bg-blue-500"></div>
-                        <span>Principal</span>
-                      </div>
-                      <div className="flex items-center gap-1.5">
-                        <div className="w-2.5 h-2.5 rounded bg-red-500"></div>
-                        <span>Interest</span>
-                      </div>
-                    </div>
-                  </div>
+                  <AnimatedBarChart
+                    title="Cost Comparison"
+                    delay={0.5}
+                    stacked={true}
+                    data={[
+                      {
+                        name: "Without Prepayment",
+                        principal: principal,
+                        interest: interestWithout,
+                      },
+                      {
+                        name: "With Prepayment",
+                        principal: principal,
+                        interest: interestWith,
+                      },
+                    ]}
+                  />
                 </div>
-              </div>
+              </motion.div>
 
               {/* Export Buttons */}
               <ExportButtons
@@ -775,10 +688,10 @@ export default function LumpSumPage() {
                 onShareWhatsApp={shareOnWhatsApp}
                 isGeneratingPDF={isGeneratingPDF}
               />
-            </>
+            </ResultsReveal>
           )}
-        </div>
+        </motion.div>
       </div>
-    </div>
+    </motion.div>
   );
 }
