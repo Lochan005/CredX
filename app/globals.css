@@ -46,3 +46,28 @@ body {
   background-size: 200% 100%;
   animation: shimmer 1.5s linear infinite;
 }
+
+/* Glassmorphic utility classes for charts */
+.glass-card {
+  background: rgba(31, 41, 55, 0.7);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 16px;
+}
+
+.chart-shadow {
+  filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.3));
+}
+
+.chart-glow-blue {
+  filter: drop-shadow(0 0 8px rgba(59, 130, 246, 0.4));
+}
+
+.chart-glow-red {
+  filter: drop-shadow(0 0 8px rgba(239, 68, 68, 0.4));
+}
+
+.chart-glow-green {
+  filter: drop-shadow(0 0 8px rgba(34, 197, 94, 0.4));
+}

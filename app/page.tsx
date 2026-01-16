@@ -14,7 +14,7 @@ export default function Home() {
           className="text-6xl md:text-7xl font-extrabold text-green-400 mb-4 drop-shadow-sm tracking-tight"
           {...fadeIn}
         >
-          Credx
+          SPED
         </motion.h1>
         <motion.p
           className="text-2xl md:text-3xl font-medium text-gray-200 mb-6 tracking-tight"
@@ -42,7 +42,7 @@ export default function Home() {
             className="text-5xl md:text-6xl font-bold text-green-500"
           />
         </div>
-        <p className="text-lg text-gray-400 mt-4">using Credx calculators</p>
+        <p className="text-lg text-gray-400 mt-4">using Sped calculators</p>
       </motion.div>
 
       {/* Scenario Selection Cards */}

@@ -30,7 +30,7 @@ export default function Header() {
           href="/"
           className="text-2xl font-bold text-green-400 hover:text-green-300 transition-colors"
         >
-          Credx
+          CredX
         </Link>
 
         {/* Desktop Navigation */}
