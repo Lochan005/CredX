@@ -22,6 +22,13 @@ class AnalyzeResponse(BaseModel):
     total_savings: float
     advice: str
 
+class PredictRequest(BaseModel):
+    description: str
+
+class PredictResponse(BaseModel):
+    description: str
+    category: str
+
 @app.post("/analyze", response_model=AnalyzeResponse)
 async def analyze_transactions(request: AnalyzeRequest):
     """
@@ -55,6 +62,20 @@ async def analyze_transactions(request: AnalyzeRequest):
 async def root():
     """Root endpoint."""
     return {"message": "Loan Angel API is running", "endpoints": ["/analyze"]}
+
+@app.post("/predict", response_model=PredictResponse)
+async def predict_category(request: PredictRequest):
+    """
+    Predict the category for a single transaction description.
+    
+    Args:
+        request: JSON object with description
+    
+    Returns:
+        JSON object with description and predicted category
+    """
+    category = angel.predict_category(request.description)
+    return PredictResponse(description=request.description, category=category)
 
 @app.get("/health")
 async def health():
